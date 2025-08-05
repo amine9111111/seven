@@ -1,42 +1,59 @@
 import streamlit as st
-import openai
+import requests
 
-# Configuration de la clé API (sécurisée via st.secrets)
-openai.api_key = st.secrets["api_key"]
+# Clé API Groq (à stocker dans .streamlit/secrets.toml)
+GROQ_API_KEY = st.secrets["groq_api_key"]
 
-# Dictionnaire des péchés et de leur personnalité
+# Personnalités des péchés capitaux
 peches = {
-    "Orgueil": "Tu es supérieur à tous. Ta grandeur est inégalée, parle avec fierté.",
-    "Gourmandise": "Tu cherches le plaisir des sens, surtout celui de manger. Tu es toujours tenté.",
-    "Luxure": "Tu es charmeur, séducteur, obsédé par le désir et l’apparence.",
-    "Avarice": "Tu veux tout posséder, tu ne partages rien. Chaque mot est une transaction.",
-    "Paresse": "Tu es lent, désintéressé, tu évites tout effort, même pour parler.",
-    "Colère": "Tu es impulsif, brutal, chaque parole peut être une attaque.",
-    "Envie": "Tu veux ce que les autres ont, tu es frustré, jaloux, rancunier."
+    "Orgueil": "Tu es supérieur à tous. Tu parles avec fierté et mépris.",
+    "Gourmandise": "Tu es obsédé par la nourriture et les plaisirs des sens.",
+    "Luxure": "Tu es charmeur, séducteur, et tu parles avec passion.",
+    "Avarice": "Tu veux tout garder pour toi, tu es froid et calculateur.",
+    "Paresse": "Tu es lent, tu n'as pas envie de faire d'efforts.",
+    "Colère": "Tu es impulsif, agressif, prêt à exploser à chaque mot.",
+    "Envie": "Tu es jaloux, frustré, tu veux ce que les autres ont."
 }
 
-# Interface Streamlit
+# Interface utilisateur
 st.set_page_config(page_title="Chat des 7 Péchés Capitaux", page_icon="💀")
-st.title("💀 Les 7 Péchés Capitaux - Chat IA")
+st.title("💀 Les 7 Péchés Capitaux - IA Groq (LLaMA 3)")
 
-# Sélection du péché
 peche_choisi = st.selectbox("Choisis un péché capital :", list(peches.keys()))
 st.markdown(f"**Personnalité IA :** *{peches[peche_choisi]}*")
 
-# Saisie utilisateur
-user_input = st.text_input("👉 Parle à ce péché capital :", "")
+user_input = st.text_input("💬 Écris un message à ce péché :", "")
 
-# Si l'utilisateur a écrit quelque chose
+# Fonction pour appeler Groq
+def chat_with_groq(peche, message):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {
+                "role": "system",
+                "content": f"Tu incarnes le péché capital '{peche}'. Ta personnalité est : {peches[peche]}"
+            },
+            {
+                "role": "user",
+                "content": message
+            }
+        ],
+        "temperature": 0.8
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 200:
+        return response.json()["choices"][0]["message"]["content"]
+    else:
+        return f"Erreur {response.status_code} : {response.text}"
+
+# Affichage de la réponse
 if user_input:
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # tu peux changer si tu utilises Groq
-            messages=[
-                {"role": "system", "content": f"Tu incarnes le péché capital '{peche_choisi}'. Ta personnalité est la suivante : {peches[peche_choisi]}"},
-                {"role": "user", "content": user_input}
-            ]
-        )
-        reply = response["choices"][0]["message"]["content"]
-        st.markdown(f"**{peche_choisi} 🗣️** : {reply}")
-    except Exception as e:
-        st.error(f"Erreur lors de l'appel à l'API : {e}")
+    with st.spinner("Le péché répond..."):
+        reponse = chat_with_groq(peche_choisi, user_input)
+        st.markdown(f"**{peche_choisi} 🗣️** : {reponse}")
