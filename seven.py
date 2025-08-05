@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # Clé API Groq (à stocker dans .streamlit/secrets.toml)
-GROQ_API_KEY = st.secrets["groq_api_key"]
+GROQ_API_KEY = st.secrets["api_key"]
 
 # Personnalités des péchés capitaux
 peches = {
@@ -57,3 +57,4 @@ if user_input:
     with st.spinner("Le péché répond..."):
         reponse = chat_with_groq(peche_choisi, user_input)
         st.markdown(f"**{peche_choisi} 🗣️** : {reponse}")
+
